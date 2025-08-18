@@ -8,8 +8,8 @@ class Solution:
             #not choose
             dfs(index+1,path)
             #choose
-            if nums[index] not in path:
-                dfs(index+1,path+[nums[index]])
+            # if nums[index] not in path:
+            dfs(index+1,path+[nums[index]])
         
         dfs(0,[])
         return rs

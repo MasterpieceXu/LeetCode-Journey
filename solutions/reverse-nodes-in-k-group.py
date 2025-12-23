@@ -13,12 +13,12 @@ class Solution:
                 kth=kth.next
                 if not kth:
                     return dummy.next
-            group_next=kth.next
-            group_start=group_pre.next
+            group_next=kth.next #下一组的开头
+            group_start=group_pre.next # 反转列表的当前组的开头
             kth.next=None
-            group_pre.next=self.reverse(group_start)
-            group_start.next=group_next
-            group_pre=group_start
+            group_pre.next=self.reverse(group_start) #调用反转函数，对当前的进行反转
+            group_start.next=group_next # 反转过后的开头到了末尾
+            group_pre=group_start # 指针移动到下一组，继续做循环
         return dummy.next
     def reverse(self,head:ListNode) ->ListNode:
         pre=None

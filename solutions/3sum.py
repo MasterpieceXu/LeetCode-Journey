@@ -1,19 +1,27 @@
 class Solution:
     def threeSum(self, nums: List[int]) -> List[List[int]]:
-        sorted_nums=sorted(nums)
-        answer_set=set()
-        answer=[]
-        for i in range(len(sorted_nums)):
-            left=i+1
-            right=len(sorted_nums)-1
-            while left<right:
-                sum_three=sorted_nums[i]+sorted_nums[left]+sorted_nums[right]
-                if sum_three>0:
-                    right-=1
-                elif sum_three<0:
-                    left+=1
+        n=len(nums)
+        res=[]
+        nums.sort()
+        for i in range(n):
+            if nums[i]>0:
+                break
+            if i>0 and nums[i]==nums[i-1]:
+                continue
+            L=i+1
+            R=n-1
+            while L<R:
+                total=nums[i]+nums[L]+nums[R]
+                if total==0:
+                    res.append([nums[i],nums[L],nums[R]])
+                    while L<R and nums[L]==nums[L+1]:
+                        L+=1
+                    while L<R and nums[R]==nums[R-1]:
+                        R-=1
+                    L+=1
+                    R-=1
+                elif total<0:
+                    L+=1
                 else:
-                    answer_set.add((sorted_nums[i],sorted_nums[left],sorted_nums[right]))
-                    left+=1
-                    right-=1
-        return list(answer_set)
+                    R-=1
+        return res

@@ -10,8 +10,5 @@ class Solution:
             need=presum[i]-k
             if need in count:
                 res+=count[need]
-            if presum[i] not in count:
-                count[presum[i]]=1
-            else:
-                count[presum[i]]+=1
+            count[presum[i]]=count.get(presum[i],0)+1
         return res

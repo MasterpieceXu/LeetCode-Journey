@@ -9,12 +9,11 @@ class Solution:
             return head
         pre=None
         curr=head
-        nxt=head.next
+        nex=head.next
         while curr is not None:
             curr.next=pre
             pre=curr
-            curr=nxt
-            if nxt is not None:
-                nxt=nxt.next
+            curr=nex
+            if nex is not None:
+                nex=nex.next
         return pre
-            

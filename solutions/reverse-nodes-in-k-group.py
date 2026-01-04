@@ -5,27 +5,26 @@
 #         self.next = next
 class Solution:
     def reverseKGroup(self, head: Optional[ListNode], k: int) -> Optional[ListNode]:
-        dummy=ListNode(0,head)
-        group_pre=dummy
-        while True:
-            kth=group_pre
-            for _ in range(k):
-                kth=kth.next
-                if not kth:
-                    return dummy.next
-            group_next=kth.next #下一组的开头
-            group_start=group_pre.next # 反转列表的当前组的开头
-            kth.next=None
-            group_pre.next=self.reverse(group_start) #调用反转函数，对当前的进行反转
-            group_start.next=group_next # 反转过后的开头到了末尾
-            group_pre=group_start # 指针移动到下一组，继续做循环
-        return dummy.next
-    def reverse(self,head:ListNode) ->ListNode:
-        pre=None
-        curr=head
-        while curr:
-            next_node=curr.next
+        if head is None:
+            return None
+        a=b=head
+        for _ in range(k):
+            if b is None:
+                return head
+            b=b.next
+        newhead=self.reverseN(a,k)
+        a.next=self.reverseKGroup(b,k)
+        return newhead
+    def reverseN(self, head:Optional[ListNode], n:int) -> Optional[ListNode]:
+        if head is None or head.next is None:
+            return head
+        pre,curr,nxt=None,head,head.next
+        while n>0:
             curr.next=pre
             pre=curr
-            curr=next_node
+            curr=nxt
+            if nxt is not None:
+                nxt=nxt.next
+            n-=1
+        head.next=curr
         return pre

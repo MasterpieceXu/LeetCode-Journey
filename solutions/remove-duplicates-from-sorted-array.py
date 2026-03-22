@@ -1,15 +1,10 @@
 class Solution:
     def removeDuplicates(self, nums: List[int]) -> int:
         slow=0
-    
-        for fast in range(len(nums)):
-            if  slow==0:
-                nums[slow]=nums[fast]
+        fast=0
+        while fast < len(nums):
+            if nums[fast] != nums[slow]:
                 slow+=1
-            
-            if nums[fast]!=nums[slow-1]:
                 nums[slow]=nums[fast]
-                slow+=1
-        return slow
-                
-        
+            fast+=1
+        return slow+1

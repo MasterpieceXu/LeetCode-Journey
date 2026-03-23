@@ -3,11 +3,18 @@ class Solution:
         """
         Do not return anything, modify nums in-place instead.
         """
-        left_index=0
-        for i in range(len(nums)):
-            if nums[i]!=0:
-                nums[left_index]=nums[i]
-                left_index+=1
-        for j in range(left_index,len(nums)):
-            nums[j]=0
-        return nums
+        x = self.remove(nums, 0)
+        
+        for i in range(x,len(nums)):
+            nums[i]=0
+        
+
+    def remove(self, nums, val):
+        slow = 0
+        fast = 0
+        while fast < len(nums):
+            if nums[fast] != val:
+                nums[slow] = nums[fast]
+                slow += 1
+            fast += 1
+        return slow 

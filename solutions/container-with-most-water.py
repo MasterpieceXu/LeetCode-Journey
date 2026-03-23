@@ -9,7 +9,7 @@ class Solution:
         while left <= right:
             curr_area = (right-left) * min(height[right], height[left])
             res = max(res, curr_area)
-            if height[left] < height[right]:
+            if height[left] <= height[right]:
                 left += 1
             else:
                 right -= 1

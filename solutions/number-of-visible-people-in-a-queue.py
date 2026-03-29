@@ -5,7 +5,7 @@ class Solution:
         s = []
         for i in range(n-1, -1, -1):
             count = 0
-            while s and heights[i] >= s[-1]:
+            while s and s[-1] <= heights[i]:
                 s.pop()
                 count += 1
             res[i] = count  if not s else count+1

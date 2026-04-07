@@ -69,7 +69,7 @@ def main():
     all_subs.sort(key=lambda x: int(x['timestamp']))
     
     subprocess.run(['git', 'config', '--global', 'user.name', 'MasterpieceXu'])
-    subprocess.run(['git', 'config', '--global', 'user.email', GIT_EMAIL])
+    subprocess.run(['git', 'config', '--global', 'user.email', kakayuankaka@gmail.com])
 
     # 记录已经在这个“当前批次”中提交过的 ID，防止死循环
     processed_ids = set()

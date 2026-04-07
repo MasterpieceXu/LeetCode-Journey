@@ -9,12 +9,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Sync
-        # 适配中国站且目前维护最及时的版本
-        uses: gear-gear/leetcode-sync@master  
+        # 换成这个专门支持力扣中国站的仓库，使用 main 分支
+        uses: haloiscoding/leetcode-sync@main  
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           leetcode-csrf-token: ${{ secrets.LEETCODE_CSRF_TOKEN }}
           leetcode-session: ${{ secrets.LEETCODE_SESSION }}
           destination-folder: 'solutions'
-          # 注意：这个插件的参数名可能略有不同
-          leetcode-cn: true
+          leetcode-cn: true                # 确保这里是 true

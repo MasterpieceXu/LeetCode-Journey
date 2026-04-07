@@ -7,8 +7,10 @@ import sys
 def log(msg):
     print(msg, flush=True)
 
+# 从 Secrets 获取
 SESSION = os.getenv('LEETCODE_SESSION', '').strip()
 CSRF_TOKEN = os.getenv('LEETCODE_CSRF_TOKEN', '').strip()
+GIT_EMAIL = os.getenv('GIT_EMAIL', '你的隐私邮箱@users.noreply.github.com') # 建议用 Secret 传入
 OUTPUT_DIR = "solutions"
 
 HEADERS = {
@@ -23,7 +25,7 @@ HEADERS = {
 def get_all_accepted_submissions():
     submissions = []
     offset, limit = 0, 20
-    log("🚀 正在检索历史提交记录...")
+    log("🚀 正在检索历史记录...")
     while True:
         payload = {"query": f"{{ submissionList(offset: {offset}, limit: {limit}) {{ submissions {{ id title statusDisplay lang timestamp }} hasNext }} }}"}
         try:
@@ -37,29 +39,20 @@ def get_all_accepted_submissions():
             if not data.get('hasNext') or offset > 2000: break
             offset += limit
             log(f"已扫描 {offset} 条记录...")
-            time.sleep(1)
+            time.sleep(0.5)
         except: break
     return submissions
 
 def get_detail(sub_id):
-    """【防弹版】绝对不会触发 AttributeError"""
     payload = {"query": f"{{ submissionDetail(submissionId: \"{sub_id}\") {{ code question {{ titleSlug }} }} }}"}
     try:
         resp = requests.post("https://leetcode.cn/graphql/", json=payload, headers=HEADERS, timeout=10)
         if resp.status_code == 200:
-            res_data = resp.json()
-            # 采用极致保守的链式获取方式
-            data = res_data.get('data', {})
-            if data:
-                detail = data.get('submissionDetail')
-                if detail: # 只有确定 detail 不是 None 才会去拿里面的东西
-                    code = detail.get('code')
-                    question = detail.get('question', {})
-                    slug = question.get('titleSlug') if question else None
-                    return code, slug
-        log(f"⚠️ 无法获取 ID 为 {sub_id} 的题目详情，可能被限流了，跳过。")
-    except Exception as e:
-        log(f"❌ 请求详情时发生网络错误: {e}")
+            data = resp.json().get('data', {})
+            if data and data.get('submissionDetail'):
+                detail = data['submissionDetail']
+                return detail.get('code'), detail.get('question', {}).get('titleSlug')
+    except: pass
     return None, None
 
 def main():
@@ -71,37 +64,45 @@ def main():
     if not all_subs: return
 
     if not os.path.exists(OUTPUT_DIR): os.makedirs(OUTPUT_DIR)
+
+    # 【关键】按时间从旧到新排序，确保最新的代码在最后一次提交
     all_subs.sort(key=lambda x: int(x['timestamp']))
     
     subprocess.run(['git', 'config', '--global', 'user.name', 'MasterpieceXu'])
-    subprocess.run(['git', 'config', '--global', 'user.email', 'kakayuankaka@gmail.com'])
+    subprocess.run(['git', 'config', '--global', 'user.email', GIT_EMAIL])
 
-    # 重点：如果是第一次同步，文件可能会很多，分批提交
-    count = 0
+    # 记录已经在这个“当前批次”中提交过的 ID，防止死循环
+    processed_ids = set()
+    
     for s in all_subs:
-        log(f"📦 正在同步: {s['title']}")
+        # 获取这道题的文件路径
+        # 注意：为了拿 slug，还是得调一下 detail 接口
+        log(f"📦 正在处理: {s['title']} (提交 ID: {s['id']})")
+        
+        # 我们可以通过简单的 Git 检查来判断“这一秒的这次提交”是否已经做过了
         code, slug = get_detail(s['id'])
         
         if code and slug:
             ext = "py" if "python" in s['lang'].lower() else "cpp" if "cpp" in s['lang'].lower() else "java"
             filepath = os.path.join(OUTPUT_DIR, f"{slug}.{ext}")
             
-            # 如果文件已存在，说明这一题已经同步过了，跳过
-            if os.path.exists(filepath):
-                continue
-
+            # 不再检查文件是否存在，直接覆盖写入！
             with open(filepath, "w", encoding="utf-8") as f:
                 f.write(code)
             
+            # 盖上当年的邮戳
             dt = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(int(s['timestamp'])))
             subprocess.run(['git', 'add', filepath])
             env = os.environ.copy()
             env["GIT_AUTHOR_DATE"], env["GIT_COMMITTER_DATE"] = dt, dt
+            
+            # 即使文件名一样，只要日期不同，这就是一个新的 Commit
             subprocess.run(['git', 'commit', '-m', f"Sync: {s['title']} ({dt})"], env=env)
-            count += 1
-            time.sleep(2.0) # 增加到 2 秒，安全第一
+            
+            # 适当延时防止限流
+            time.sleep(1.5)
 
-    log(f"🏁 任务大功告成！本次新同步了 {count} 道题目。")
+    log("🏁 顺利拉取！")
 
 if __name__ == "__main__":
     main()

@@ -2,77 +2,74 @@ import requests
 import os
 import time
 import subprocess
+import sys
 
-# 配置（记得在 GitHub Secrets 里只填乱码，不带冒号！）
+# 强制实时刷新日志
+def log(msg):
+    print(msg, flush=True)
+
+# 密钥（Secrets 里只填乱码！）
 SESSION = os.getenv('LEETCODE_SESSION')
 CSRF_TOKEN = os.getenv('LEETCODE_CSRF_TOKEN')
 OUTPUT_DIR = "solutions"
-GRAPHQL_URL = "https://leetcode.cn/graphql/"
 
-HEADERS = {
-    "Cookie": f"LEETCODE_SESSION={SESSION}; csrftoken={CSRF_TOKEN}",
-    "X-CSRFToken": CSRF_TOKEN,
-    "Referer": "https://leetcode.cn/progress/",
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
-}
-
-def get_all_accepted_submissions():
-    submissions = []
-    offset, limit = 0, 20
-    while True:
-        payload = {
-            "query": """
-            query submissions($offset: Int, $limit: Int) {
-                submissionList(offset: $offset, limit: $limit) {
-                    submissions { id title titleSlug statusDisplay lang timestamp }
-                    hasNext
-                }
-            }
-            """,
-            "variables": {"offset": offset, "limit": limit}
-        }
-        resp = requests.post(GRAPHQL_URL, json=payload, headers=HEADERS)
-        if resp.status_code != 200: break
-        data = resp.json().get('data', {}).get('submissionList', {})
-        for s in data.get('submissions', []):
-            if s['statusDisplay'] == 'Accepted': submissions.append(s)
-        if not data.get('hasNext') or offset > 1000: break # 限制翻页深度
-        offset += limit
-        time.sleep(0.5)
-    return submissions
-
-def get_submission_code(submission_id):
-    payload = {
-        "query": "query s($id: ID!) { submissionDetail(submissionId: $id) { code } }",
-        "variables": {"id": submission_id}
-    }
-    resp = requests.post(GRAPHQL_URL, json=payload, headers=HEADERS)
-    return resp.json().get('data', {}).get('submissionDetail', {}).get('code') if resp.status_code == 200 else None
-
-def git_commit_with_date(filepath, submission_time, title):
-    """关键逻辑：强行指定 Git 提交时间"""
-    # 将力扣的时间戳转为 Git 需要的格式
-    formatted_date = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(int(submission_time)))
-    
-    # 执行 Git 命令
-    subprocess.run(['git', 'add', filepath])
-    # 通过环境变量修改作者和提交时间
-    env = os.environ.copy()
-    env["GIT_AUTHOR_DATE"] = formatted_date
-    env["GIT_COMMITTER_DATE"] = formatted_date
-    
-    subprocess.run(['git', 'commit', '-m', f"Sync LeetCode: {title}"], env=env)
+log("--- 脚本开始运行 ---")
 
 if __name__ == "__main__":
     if not SESSION or not CSRF_TOKEN:
-        print("Error: Missing credentials in Secrets")
-        exit(1)
-    
-    subs = get_all_accepted_submissions()
-    if not os.path.exists(OUTPUT_DIR): os.makedirs(OUTPUT_DIR)
-    
-    # 配置 Git 用户信息（Action 运行时需要）
-    subprocess.run(['git', 'config', '--global', 'user.name', 'GitHub Action'])
-    subprocess.run(['git', 'config', '--global', 'user.email', 'action@github.com'])
+        log("❌ 错误：Secrets 没设置好！请检查 LEETCODE_SESSION 和 LEETCODE_CSRF_TOKEN")
+        sys.exit(1)
 
-    seen_problems = set()
+    log("🚀 正在尝试连接力扣...")
+    
+    headers = {
+        "Cookie": f"LEETCODE_SESSION={SESSION}; csrftoken={CSRF_TOKEN}",
+        "X-CSRFToken": CSRF_TOKEN,
+        "Referer": "https://leetcode.cn/progress/",
+        "User-Agent": "Mozilla/5.0"
+    }
+    
+    payload = {
+        "query": "query s($o: Int, $l: Int) { submissionList(offset: $o, limit: $l) { submissions { id title titleSlug statusDisplay timestamp } hasNext } }",
+        "variables": {"o": 0, "l": 20}
+    }
+
+    try:
+        resp = requests.post("https://leetcode.cn/graphql/", json=payload, headers=headers)
+        if resp.status_code != 200:
+            log(f"❌ 登录失败，HTTP 状态码: {resp.status_code}")
+            sys.exit(0)
+            
+        data = resp.json().get('data', {}).get('submissionList', {})
+        raw_subs = data.get('submissions', [])
+        
+        if not raw_subs:
+            log("⚠️ 登录上去了，但没抓到题。大概率是 Cookie 没填对！")
+            sys.exit(0)
+
+        subs = [s for s in raw_subs if s['statusDisplay'] == 'Accepted']
+        log(f"✅ 成功！发现 {len(subs)} 道通过的题目。")
+
+        if not os.path.exists(OUTPUT_DIR):
+            os.makedirs(OUTPUT_DIR)
+
+        for s in subs:
+            filepath = os.path.join(OUTPUT_DIR, f"{s['titleSlug']}.py")
+            with open(filepath, "w") as f:
+                f.write(f"# {s['title']}\n# Date: {time.ctime(int(s['timestamp']))}")
+            
+            # 回溯时间 Commit
+            dt = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(int(s['timestamp'])))
+            log(f"📦 提交: {s['title']} ({dt})")
+            
+            subprocess.run(['git', 'add', filepath])
+            env = os.environ.copy()
+            env["GIT_AUTHOR_DATE"], env["GIT_COMMITTER_DATE"] = dt, dt
+            subprocess.run(['git', 'config', '--global', 'user.name', 'MasterpieceXu'])
+            subprocess.run(['git', 'config', '--global', 'user.email', 'action@github.com'])
+            subprocess.run(['git', 'commit', '-m', f"Sync: {s['title']}"], env=env)
+
+    except Exception as e:
+        log(f"❌ 运行报错: {e}")
+
+    log("--- 任务结束 ---")

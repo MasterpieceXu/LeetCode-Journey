@@ -1,26 +1,48 @@
 name: My Custom LeetCode Sync
+
+# 触发条件
 on:
-  workflow_dispatch:
+  workflow_dispatch:      # 允许你手动点击运行
   schedule:
-    - cron: '0 16 * * *'
+    - cron: '0 16 * * *'   # 每天北京时间凌晨 0 点自动运行 (16:00 UTC)
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    
+    # 核心权限：必须允许脚本修改仓库内容
+    permissions:
+      contents: write
+      
     steps:
+      # 1. 下载仓库代码
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
+      # 2. 安装 Python 环境
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.9'
+          python-version: '3.10'
 
+      # 3. 安装必要的依赖库
       - name: Install dependencies
-        run: pip install requests
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
 
+      # 4. 运行自研 Python 脚本
       - name: Run sync script
         env:
           LEETCODE_SESSION: ${{ secrets.LEETCODE_SESSION }}
           LEETCODE_CSRF_TOKEN: ${{ secrets.LEETCODE_CSRF_TOKEN }}
         run: python sync_leetcode.py
+
+      # 5. 把生成出来的代码文件推送到 GitHub 仓库
+      - name: Commit and Push changes
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          git add .
+          # 检查是否有文件变化，如果有才提交，防止因为没有新题而报错
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto sync leetcode solutions" && git push)

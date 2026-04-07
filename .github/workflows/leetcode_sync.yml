@@ -9,10 +9,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Sync
-        uses: joshcai/leetcode-sync@master  
+        # 适配中国站且目前维护最及时的版本
+        uses: gear-gear/leetcode-sync@master  
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           leetcode-csrf-token: ${{ secrets.LEETCODE_CSRF_TOKEN }}
           leetcode-session: ${{ secrets.LEETCODE_SESSION }}
           destination-folder: 'solutions'
-          leetcode-cn: true                
+          # 注意：这个插件的参数名可能略有不同
+          leetcode-cn: true

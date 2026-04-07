@@ -74,7 +74,7 @@ def main():
     all_subs.sort(key=lambda x: int(x['timestamp']))
     
     subprocess.run(['git', 'config', '--global', 'user.name', 'MasterpieceXu'])
-    subprocess.run(['git', 'config', '--global', 'user.email', 'action@github.com'])
+    subprocess.run(['git', 'config', '--global', 'user.email', 'kakayuankaka@gmail.com'])
 
     # 重点：如果是第一次同步，文件可能会很多，分批提交
     count = 0

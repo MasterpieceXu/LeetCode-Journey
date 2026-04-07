@@ -1,4 +1,4 @@
-name: Sync LeetCode
+name: My Custom LeetCode Sync
 on:
   workflow_dispatch:
   schedule:
@@ -8,13 +8,19 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Sync
-        # 这个仓库是绝对存在的，专门支持 leetcode.cn
-        uses: everpcpc/leetcode-sync@v1
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          leetcode-csrf-token: ${{ secrets.LEETCODE_CSRF_TOKEN }}
-          leetcode-session: ${{ secrets.LEETCODE_SESSION }}
-          destination-folder: 'solutions'
-          # 关键参数：开启力扣中国站支持
-          leetcode-cn: true
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run sync script
+        env:
+          LEETCODE_SESSION: ${{ secrets.LEETCODE_SESSION }}
+          LEETCODE_CSRF_TOKEN: ${{ secrets.LEETCODE_CSRF_TOKEN }}
+        run: python sync_leetcode.py

@@ -9,11 +9,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Sync
-        # 换成这个专门支持力扣中国站的仓库，使用 main 分支
-        uses: haloiscoding/leetcode-sync@main  
+        # 这个仓库是绝对存在的，专门支持 leetcode.cn
+        uses: everpcpc/leetcode-sync@v1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           leetcode-csrf-token: ${{ secrets.LEETCODE_CSRF_TOKEN }}
           leetcode-session: ${{ secrets.LEETCODE_SESSION }}
           destination-folder: 'solutions'
-          leetcode-cn: true                # 确保这里是 true
+          # 关键参数：开启力扣中国站支持
+          leetcode-cn: true

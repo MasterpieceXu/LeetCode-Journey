@@ -7,11 +7,12 @@ import sys
 def log(msg):
     print(msg, flush=True)
 
-# 从 Secrets 获取
 SESSION = os.getenv('LEETCODE_SESSION', '').strip()
 CSRF_TOKEN = os.getenv('LEETCODE_CSRF_TOKEN', '').strip()
-GIT_EMAIL = os.getenv('GIT_EMAIL', '你的隐私邮箱@users.noreply.github.com') # 建议用 Secret 传入
+# github 认证的邮箱
+GIT_EMAIL = 'kakayuankaka@gmail.com' 
 OUTPUT_DIR = "solutions"
+SYNC_LOG = "synced_ids.txt" # 增量同步
 
 HEADERS = {
     "Content-Type": "application/json",
@@ -21,6 +22,18 @@ HEADERS = {
     "Referer": "https://leetcode.cn/progress/",
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
 }
+
+def get_synced_ids():
+    """读取已经同步过的 ID 清单"""
+    if os.path.exists(SYNC_LOG):
+        with open(SYNC_LOG, 'r') as f:
+            return set(line.strip() for line in f)
+    return set()
+
+def save_synced_id(sub_id):
+    """保存同步成功的 ID"""
+    with open(SYNC_LOG, 'a') as f:
+        f.write(f"{sub_id}\n")
 
 def get_all_accepted_submissions():
     submissions = []
@@ -59,50 +72,51 @@ def main():
     if not SESSION or not CSRF_TOKEN:
         log("❌ 缺失 Secrets"); sys.exit(1)
     
+    synced_ids = get_synced_ids()
     all_subs = get_all_accepted_submissions()
     log(f"✅ 共找到 {len(all_subs)} 条通过记录。")
-    if not all_subs: return
-
+    
     if not os.path.exists(OUTPUT_DIR): os.makedirs(OUTPUT_DIR)
-
-    # 【关键】按时间从旧到新排序，确保最新的代码在最后一次提交
+    
+    # 按时间升序排序（保证最后留在文件夹里的是最新的代码）
     all_subs.sort(key=lambda x: int(x['timestamp']))
     
     subprocess.run(['git', 'config', '--global', 'user.name', 'MasterpieceXu'])
-    subprocess.run(['git', 'config', '--global', 'user.email', kakayuankaka@gmail.com])
+    subprocess.run(['git', 'config', '--global', 'user.email', GIT_EMAIL])
 
-    # 记录已经在这个“当前批次”中提交过的 ID，防止死循环
-    processed_ids = set()
-    
+    count = 0
     for s in all_subs:
-        # 获取这道题的文件路径
-        # 注意：为了拿 slug，还是得调一下 detail 接口
-        log(f"📦 正在处理: {s['title']} (提交 ID: {s['id']})")
+        sub_id = str(s['id'])
         
-        # 我们可以通过简单的 Git 检查来判断“这一秒的这次提交”是否已经做过了
-        code, slug = get_detail(s['id'])
+        # 如果这个提交 ID 已经在txt里，直接跳过
+        if sub_id in synced_ids:
+            continue
+        
+        log(f"📦 正在同步新记录: {s['title']} (ID: {sub_id})")
+        code, slug = get_detail(sub_id)
         
         if code and slug:
             ext = "py" if "python" in s['lang'].lower() else "cpp" if "cpp" in s['lang'].lower() else "java"
             filepath = os.path.join(OUTPUT_DIR, f"{slug}.{ext}")
             
-            # 不再检查文件是否存在，直接覆盖写入！
             with open(filepath, "w", encoding="utf-8") as f:
                 f.write(code)
             
-            # 盖上当年的邮戳
+            # 设置 Git 时间戳
             dt = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(int(s['timestamp'])))
             subprocess.run(['git', 'add', filepath])
+            # 同时把txt也加进去
+            save_synced_id(sub_id)
+            subprocess.run(['git', 'add', SYNC_LOG])
+            
             env = os.environ.copy()
             env["GIT_AUTHOR_DATE"], env["GIT_COMMITTER_DATE"] = dt, dt
+            subprocess.run(['git', 'commit', '-m', f"Sync: {s['title']} (ID: {sub_id})"], env=env)
             
-            # 即使文件名一样，只要日期不同，这就是一个新的 Commit
-            subprocess.run(['git', 'commit', '-m', f"Sync: {s['title']} ({dt})"], env=env)
-            
-            # 适当延时防止限流
-            time.sleep(1.5)
+            count += 1
+            time.sleep(2.0) # 稍微慢一点，稳
 
-    log("🏁 顺利拉取！")
+    log(f"🏁 任务完成！本次新点亮了 {count} 个绿点。")
 
 if __name__ == "__main__":
     main()

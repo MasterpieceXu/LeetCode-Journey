@@ -2,7 +2,7 @@
 
 > A fully automated pipeline for synchronizing LeetCode progress to GitHub, featuring incremental updates, time-travel commits, and robust rate-limit handling.
 > 
-> *[中文说明见下文 / Scroll down for Chinese version]*
+
 
 ## 🌟 Introduction
 
@@ -65,5 +65,5 @@ To ensure GitHub correctly attributes the commits to your account, update the `G
 > 
 > * **Region Note**: This script defaults to **LeetCode China (`leetcode.cn`)**. If you use the global version, set the `LEETCODE_REGION` secret to `US`.
 > * **Rate Limiting**: If migrating a large amount of historical data (e.g., 100+ problems), LeetCode may temporarily rate-limit the requests. The script safely ignores these errors. Simply run the workflow a few more times; it will incrementally catch up.
-# 🇨🇳 中文说明 (Chinese Version)
+
 

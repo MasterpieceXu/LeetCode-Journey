@@ -5,25 +5,19 @@
 #         self.next = next
 class Solution:
     def mergeKLists(self, lists: List[Optional[ListNode]]) -> Optional[ListNode]:
-        if not lists:
-            return None
-        # 虚拟头结点
+        if lists is None:
+            return []
+        pq = []
         dummy = ListNode(-1)
         p = dummy
-        # 优先级队列，最小堆
-        pq = []
-        # 将 k 个链表的头结点加入最小堆
+        # 将链表头结点加入到结果中
         for i, head in enumerate(lists):
             if head is not None:
-                heapq.heappush(pq, (head.val, i, head))
-
+                heapq.heappush(pq,(head.val, i, head))
         while pq:
-            # 获取最小节点，接到结果链表中
             val, i, node = heapq.heappop(pq)
             p.next = node
             if node.next is not None:
-                heapq.heappush(pq, (node.next.val, i, node.next))
-            # p 指针不断前进
+                heapq.heappush(pq,(node.next.val, i, node.next))
             p = p.next
-            
         return dummy.next
